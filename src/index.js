@@ -1,69 +1,48 @@
 import connectDB from "./db/index.js";
-import dotenv from "dotenv"
-import express from "express"
+import dotenv from "dotenv";
+import { app } from "./app.js";
 
-const app = express()
-
-dotenv.config()
-
-
+dotenv.config({
+  path: './.env'
+}) // Load environment variables
 
 
-
-connectDB() // DB connect ho chuka h toh promise bhi return karega toh 
-.then(() => {
-    app.listen(process.env.PORT || 8000, () => {
-        console.log(`Server is running at port: ${process.env.PORT}`)
-    })
-})
-.catch((error) => {
-    console.log("DB connection Failed", error)
-})
-
-
-
+connectDB()
+  .then(() => {
+    const PORT = process.env.PORT || 8000;
+    app.listen(PORT, () => {
+      console.log(`Server is running at port: ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("DB connection Failed", error);
+    process.exit(1); // Exit process if DB fails to connect
+  });
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// YEH BHI EK TARIKA H DB CONNECT KRNE KE LIYE
+// Alternative IIFE Approach
 /*
-// IFEE likho
-( async () => {
-    try{
-        await mongoose.connect(`${process.env.MONGODB_URL}/${DB_NAME}`)
-        app.on("error", (error) => {
-            console.log("Error occured", error)
-            throw error
-        })
+(async () => {
+    try {
+        if (!process.env.MONGODB_URL) {
+            throw new Error("MONGODB_URL is not defined in .env file");
+        }
 
-        app.listen(process.env.PORT, () => {
-            console.log(`App is running on port ${process.env.PORT}`)
-        })
-    } catch {
-        console.error("Error:", error)
-        throw error
+        await mongoose.connect(`${process.env.MONGODB_URL}/${DB_NAME}`);
+
+        app.on("error", (error) => {
+            console.log("Error occurred", error);
+            throw error;
+        });
+
+        const PORT = process.env.PORT || 8000;
+        app.listen(PORT, () => {
+            console.log(`App is running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error("Error:", error);
+        process.exit(1); // Exit the process on error
     }
-})()
-    */
+})();
+*/
+
