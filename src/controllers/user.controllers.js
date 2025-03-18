@@ -319,4 +319,81 @@ const updateCoverImage = asyncHandler(async(req,res) => {
     .json(new ApiResponse(200, "Cover Image Uploaded Successfully"))
 })
 
-export { registerUser,loginUser,logoutUser,refreshToken,changeCurrentPassword,updateUserAvatar,updateCoverImage }
+const getUserChannelProfile = asyncHandler(async(req,res) => {
+    const { username } = req.params
+
+    if (!username) {
+        throw new ApiError(400, "Username is Missing")
+    }
+
+    const channel = await User.aggregate([
+        {
+            $match:{
+                username: username?.toLowerCase()
+            }
+        },
+        {
+            // yeh subcriber ke liye likha h maine ki kitne subscriber h
+            $lookup:{
+                from:"subscriptions",
+                localField:"_id",
+                foreignField:"channel",
+                as:"subscribers"
+            }
+        },
+        {
+            $lookup:{
+                from:"subscriptions",
+                localField:"_id",
+                foreignField:"subscribedTo"
+            }
+        },
+        {
+            $addFields: {
+                subscribersCount:{
+                    $size: "subscribers" // yeh maine isliye likha h kyonki mujhe yeh bhi toh dhikhna tha ki subscriber kitne h
+                },
+                channelsSubscribedToCount: {
+                    $size: "subscribedTo" // yeh maine isliye likha h kyonki mujhe yeh bhi toh dhikhna tha ki maine kisko subscribe kr rakha h
+                },
+                isSubscribed:{
+                    $cond: {
+                        if: {$in:[req.user?._id, "$subscribers.subscriber"]},
+                        then:true,
+                        else: false // yeh maine condition isliye likha h kyonki jb maine kisi channel ko subscribe kr rkha h toh jb main agki baar fir se login kroonga toh mujhe woh channel subscribed likh ke aana chahiye isiliye yeh condtion likha h maine
+                    }
+                }
+            }
+        },
+        {
+            $project:{
+                fullName:1,
+                username:1,
+                subscribersCount:1,
+                channelsSubscribedToCount:1,
+                isSubscribed:1,
+                avatar:1,
+                coverImage:1,
+                email:1 /// yeh maine project isliye likha h kyonki mujhe jobhi information dhikhni h usko main true mark krdiya h
+            }
+        }
+    ])
+
+    if(!channel?.length) {
+        throw new ApiError(404,"channel does not exists")
+    }
+
+    return res.status(200)
+    .json(
+        new ApiResponse(200, channel[0],"User channel fetched successfully")
+    )
+})
+
+export { registerUser,
+    loginUser,
+    logoutUser,
+    refreshToken,
+    changeCurrentPassword,
+    updateUserAvatar,
+    updateCoverImage,
+    getUserChannelProfile }
